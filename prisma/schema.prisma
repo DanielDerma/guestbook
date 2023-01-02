@@ -19,6 +19,12 @@ model Example {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+model Message {
+  id           String   @id @default(cuid())
+  userId       String
+  text         String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
 // Necessary for Next auth
 model Account {
@@ -55,6 +61,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  messages      Message[]
 }
 
 model VerificationToken {

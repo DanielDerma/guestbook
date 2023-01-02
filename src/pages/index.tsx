@@ -6,10 +6,23 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { trpc } from "../utils/trpc";
 
 const Home: NextPage = () => {
-  const hello = trpc.example.hello.useQuery({ text: "from tRPC" });
+  const addMessage = trpc.message.add.useMutation({
+    onSuccess: () => {
+      console.log("success");
+    },
+    onError: (err) => {
+      console.log(err);
+    },
+  });
 
   const isSignedIn = useSession().data?.user !== undefined;
-  console.log(isSignedIn);
+
+  const createMessage = () => {
+    addMessage.mutate({
+      text: "asdf23",
+    });
+  };
+
   return (
     <>
       <Head>
@@ -39,7 +52,10 @@ const Home: NextPage = () => {
                     placeholder="Your message..."
                     className="bg-[#222222] text-white focus:outline-none"
                   />
-                  <button className="h-8 rounded-sm bg-[#333333] px-4 text-white focus:outline-none">
+                  <button
+                    onClick={createMessage}
+                    className="h-8 rounded-sm bg-[#333333] px-4 text-white focus:outline-none"
+                  >
                     Sign
                   </button>
                 </div>
@@ -65,6 +81,7 @@ const Home: NextPage = () => {
             </div>
           </div>
         </div>
+        <AuthShowcase />
       </main>
     </>
   );
