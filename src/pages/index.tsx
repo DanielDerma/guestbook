@@ -6,8 +6,19 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { trpc } from "../utils/trpc";
 
 const Home: NextPage = () => {
-  const addMessage = trpc.message.add.useMutation({
+  const { data, isLoading, refetch } = trpc.message.getAll.useQuery();
+
+  const useDeleteHook = trpc.message.delete.useMutation({
     onSuccess: () => {
+      refetch();
+    },
+    onError: (err) => {
+      console.log(err);
+    },
+  });
+  const useAddMessage = trpc.message.add.useMutation({
+    onSuccess: () => {
+      refetch();
       console.log("success");
     },
     onError: (err) => {
@@ -16,10 +27,24 @@ const Home: NextPage = () => {
   });
 
   const isSignedIn = useSession().data?.user !== undefined;
+  const myUserId = useSession().data?.user?.id;
 
-  const createMessage = () => {
-    addMessage.mutate({
-      text: "asdf23",
+  const onDelete = (id: string) => {
+    useDeleteHook.mutate({
+      id,
+    });
+  };
+
+  interface FormInputs extends HTMLFormElement {
+    messageInput: HTMLInputElement;
+    // Other form elements go here
+  }
+
+  const createMessage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const text = (e.target as FormInputs).messageInput.value;
+    useAddMessage.mutate({
+      text,
     });
   };
 
@@ -45,24 +70,25 @@ const Home: NextPage = () => {
               Share a message for a future visitor of my site.
             </p>
             {isSignedIn ? (
-              <>
+              <form onSubmit={createMessage}>
                 <div className="flex justify-around rounded-md bg-[#222222] px-2 py-4">
                   <input
                     type="text"
+                    name="messageInput"
                     placeholder="Your message..."
                     className="bg-[#222222] text-white focus:outline-none"
                   />
                   <button
-                    onClick={createMessage}
+                    type="submit"
                     className="h-8 rounded-sm bg-[#333333] px-4 text-white focus:outline-none"
                   >
-                    Sign
+                    {useAddMessage.isLoading ? "Loading..." : "Submit"}
                   </button>
                 </div>
                 <p className="text-green-400">
                   Hooray! Thanks for signing my Guestbook.
                 </p>
-              </>
+              </form>
             ) : (
               <div className="flex rounded-md px-2 py-4">
                 <button className="h-8 rounded-sm bg-[#333333] px-4 text-white focus:outline-none">
@@ -72,13 +98,24 @@ const Home: NextPage = () => {
             )}
           </div>
           <div className="my-6">
-            <div className="text-white">
-              <h3>hi</h3>
-              <div className="flex gap-4">
-                <p>daniel</p>
-                <p>31 Dec 2022 at 10:27 PM</p>
-              </div>
-            </div>
+            {!isLoading &&
+              data?.map(({ createdAt, id, text, userId, displayName }) => (
+                <div key={id} className="text-white">
+                  <h3>{text}</h3>
+                  <div className="flex gap-4">
+                    <p>{displayName}</p>
+                    <p>{createdAt.toDateString()}</p>
+                    {userId === myUserId ? (
+                      <button
+                        onClick={() => onDelete(id)}
+                        className="text-red-500"
+                      >
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
         <AuthShowcase />
